@@ -26,20 +26,26 @@ def merge_pdf(pdfs, path):
 @app.route('/', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
-        if 'file' not in request.files:
+        if not request.files:
             return Response("{'message':'No file'}", status=400)
-        
-        files = request.files.getlist('file')
-        if not files:
-            return Response("{'message':'No file'}", status=400)
+        print(request.files)
 
-        for f in files:
-            if not allowed_file(f.filename):
-                return Response("{{'message':'file {} not supported'}}".format(f), status=400)
+        filenames = []
+        files = []
+        for i in range(len(request.files)):
+            file = request.files.get(f'part{i+1}')
+            files.append(file)
+            filenames.append(file.filename)
         
-        files = request.files.getlist("file")
+        if not files:
+            return Response("{'message':'file empty'}", status=400)
+
+        for filename in filenames:
+            if not allowed_file(filename):
+                return Response(f"{{'message':'file {filename} not supported'}}", status=400)
         
-        filenames =  [secure_filename(f.filename) for f in files]
+        filenames =  [secure_filename(filename) for filename in filenames]
+        print(filenames)
         for file, filename in zip(files, filenames):
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         
@@ -47,6 +53,7 @@ def upload_file():
         return send_from_directory(app.config['MERGED_FOLDER'], 'result.pdf')
 
     return Response("{'message':'No file'}", status=400)
+
 
 if __name__ == '__main__':
     from werkzeug.serving import run_simple
